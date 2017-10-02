@@ -22,6 +22,9 @@
  ********************************************************************************/
 
 				.text
+				
+.equ	CUR_MODE, 0x50000000
+.equ	DATA_SENSOR, 0x50000004
 
 /*
  * Configure the Generic Interrupt Controller (GIC)
@@ -140,7 +143,7 @@ CONFIG_JTAG:
 
 /* Echo Character Back from UART */
 JTAG_ISR:
-				PUSH		{LR}
+				PUSH		{r7, LR}
 
         LDR		r1, =0xFF201000
 
@@ -149,15 +152,18 @@ JTAG_READ_POLL:
     		ANDS r2, r3, #0x8000 /* Mask other bits */
     		BEQ	 	JTAG_EXIT	/* If this is 0, data is not valid */
     		and r2, r3, #0x00FF /* Data read is now in r2 */
+			LDR r7, =CUR_MODE	// load current mode
+			
+        cmp r2, #0x72 /* if received 'r' in ASCII */
+		MOVEQ r3, #1
+        STREQ r3, [r7] 
 
-        cmp r2, #72 /* if received 'r' in ASCII */
-        mov r7, #1 /* r7 is our global for now */
-
-        cmp r2, #73 /* if received 's' in ASCII */
-        mov r7, #0 /* r7 is the global */
+        cmp r2, #0x73 /* if received 's' in ASCII */
+		MOVEQ r3, #0
+        STREQ r3, [r7] 
 
 JTAG_EXIT:
-    		POP		{LR}
+    		POP		{r7, LR}
     		MOV		PC, LR
 
 /* Timer ISR */
@@ -170,21 +176,26 @@ JTAG_WRITE_POLL:
 				LDR 	r3, [r1, #4] 	/* Load from the JTAG */
     		LSRS 	r3, r3, #16 	/* Check only the write available bits */
     		BEQ	 	JTAG_WRITE_POLL 	/* If this is 0, data cannot be sent yet */
-
-        cmp r7, #0 /* we want speed */
-        B SEND_SPEED
-        cmp r7, #1
-        B SEND_SENSORS
+			
+		LDR r2, =CUR_MODE
+		LDR r3, [r2]
+        cmp r3, #0 /* we want speed */
+        BEQ SEND_SPEED
+        cmp r3, #1
+        BEQ SEND_SENSORS
         B EXIT_TIMER_ISR
 
 SEND_SPEED:
-        mov r2, #0
-        and r2, r8, #0xFF /*r8 is the raw sensor data. anding with FF gives speed*/
+        LDR r2, =DATA_SENSOR
+		LDR r3, [r2]
+        and r2, r3, #0xFF /*r3 is the raw sensor data. anding with FF gives speed*/
         STR 	r2, [r1] 	/* Echo the data back to the JTAG */
         B EXIT_TIMER_ISR
-B SEND_SENSORS
-        mov r2, #0
-        lsr r2, r8, #8 /*r8 is raw data, shift by 8 gives sensors */
+		
+SEND_SENSORS:
+        LDR r2, =DATA_SENSOR
+		LDR r3, [r2]
+        lsr r2, r3, #8 /*r3 is raw data, shift by 8 gives sensors */
         and r2, #0x1F
         STR 	r2, [r1] 	/* Echo the data back to the JTAG */
         B EXIT_TIMER_ISR
@@ -226,7 +237,8 @@ _start:
 CONTROL_LOOP:
   BL READ_SENSORS
   mov r4, r0
-  mov r8, r0
+  LDR r2, =DATA_SENSOR
+  STR r4, [r2]
   /* r4: raw sensor reading */
 SPEED:
   /* r1: current speed
