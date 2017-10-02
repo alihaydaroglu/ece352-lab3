@@ -1,0 +1,21 @@
+Jiading Zhu 1002445874
+Ali Haydaroglu
+
+Questions:
+
+1. Set bit 0 in the control register (base address +4) of the JTAG UART to 1 to enable read interrupts.
+
+2. Set bit 0 in the control register (base address +4) of the timer to 1 to enable timeout interrupts.
+
+3. The SUBS instruction saves the value in Link register minus 4 into the program counter,
+helping cpu resumes what it was doing before entering interrupts. SUBS also copies SPSR back into
+CPSR, which would change the mode back and reset the N, V, Z, C flags.
+
+4.
+
+5.
+
+6. The two LDR instructions are to initialize stack pointers for IRQ mode and SVC mode. Since stack
+pointers for both modes need to be initialized, there should be two LDR instructions.
+
+7. Code is shown below:
