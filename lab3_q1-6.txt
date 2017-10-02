@@ -11,9 +11,10 @@ Questions:
 helping cpu resumes what it was doing before entering interrupts. SUBS also copies SPSR back into
 CPSR, which would change the mode back and reset the N, V, Z, C flags.
 
-4.
+4. Any register other than R0-R3 must be backed up inside an interrupt handler
 
-5.
+5. Registers R0-R3 must be backed up before calling a function. These registers are not saved within
+a standard C function.
 
 6. The two LDR instructions are to initialize stack pointers for IRQ mode and SVC mode. Since stack
 pointers for both modes need to be initialized, there should be two LDR instructions.
